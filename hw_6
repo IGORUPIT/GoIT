@@ -1,0 +1,71 @@
+import re
+import sys
+import shutil
+import os
+import pathlib
+
+def normalize(name: str) -> str:
+    UKRAINIAN_SYMBOLS = 'абвгдеєжзиіїйклмнопрстуфхцчшщьюя'
+    TRANSLATION = ("a", "b", "v", "g", "d", "e", "je", "zh", "z", "y", "i", "ji", "j", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u",
+               "f", "h", "ts", "ch", "sh", "sch", "", "ju", "ja")
+
+    TRANS = {}
+    for key, value in zip(UKRAINIAN_SYMBOLS, TRANSLATION):
+        TRANS[ord(key)] = value
+        TRANS[ord(key.upper())] = value.upper()
+
+    name, *extension = name.split('.')
+    new_name = name.translate(TRANS)
+    new_name = re.sub(r'\W', '_', new_name)
+    return f"{new_name}.{'.'.join(extension)}"
+
+def sort_files(path, destination_folder):
+    if not os.path.exists(f'{destination_folder}/images'):
+        os.mkdir(f'{destination_folder}/images')
+    if not os.path.exists(f'{destination_folder}/video'):
+        os.mkdir(f'{destination_folder}/video')
+    if not os.path.exists(f'{destination_folder}/documents'):
+        os.mkdir(f'{destination_folder}/documents')
+    if not os.path.exists(f'{destination_folder}/archives'):
+        os.mkdir(f'{destination_folder}/archives')
+    if not os.path.exists(f'{destination_folder}/music'):
+        os.mkdir(f'{destination_folder}/music')
+    
+    if path.is_dir():
+        if not os.listdir(path):
+            os.rmdir(path)
+        else:
+            for element in path.iterdir():
+                if element.name in ('video', 'documents', 'archives', 'music', 'images'):
+                    pass
+                else:
+                    sort_files(element, destination_folder)
+    else:
+        new_file_name = normalize(pathlib.Path(path).resolve().stem)
+        if path.suffix in ('.jpg', '.png', '.jpeg', '.svg'):
+            new_path = f'{destination_folder}/images/{new_file_name}{path.suffix}'
+            os.rename(path, new_path)
+        elif path.suffix in ('.avi', '.mp4', '.mov', '.mkv'):
+            new_path = f'{destination_folder}/video/{new_file_name}{path.suffix}'
+            os.rename(path, new_path)
+        elif path.suffix in ('.doc', '.docx', '.txt', '.pdf', '.xlsx', '.pptx'):
+            new_path = f'{destination_folder}/documents/{new_file_name}{path.suffix}'
+            os.rename(path, new_path)
+        elif path.suffix in ('.mp3', '.ogg', '.wav', '.amr'):
+            new_path = f'{destination_folder}/music/{new_file_name}{path.suffix}'
+            os.rename(path, new_path)
+        elif path.suffix in ('.zip', '.gz', '.tar'):
+            new_path = f'{destination_folder}/archives/{new_file_name}'
+            shutil.unpack_archive(path, new_path)
+            os.remove(path)
+        else:
+            new_path = f'{destination_folder}/other/{new_file_name}{path.suffix}'
+            os.rename(path, new_path)
+
+def main():
+    path = pathlib.Path(sys.argv[1])
+    destination_folder = pathlib.Path(sys.argv[2])
+    sort_files(path, destination_folder)
+
+if __name__ == '__main__':
+    main()
